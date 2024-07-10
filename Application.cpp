@@ -1,186 +1,303 @@
 #include "Application.h"
-
-// Upgrade to C++ 11
+#include <GL/glew.h>
+#include <SDL2/SDL_opengl.h>
+#include <glm/gtc/type_ptr.hpp>
+#include "imgui_impl_opengl3.h"
+#include <iostream>
+#include <stdexcept>
 
 #ifdef _WIN32
+#include <windows.h>
 #else
-uint32_t linux_tick() {
+#include <time.h>
+uint32_t linux_tick()
+{
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return ((ts.tv_sec * 1000) + (ts.tv_nsec / 1000000));
 }
 #endif
 
-Application::Application() {
-  std::cout << "-----Application Created\n";
-  gameRunning = true;
-  frameCount = 0;
-// Windows and Linux Definitions
+const char *vertexShaderSource = R"(
+    #version 330 core
+    layout (location = 0) in vec3 aPos;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    void main()
+    {
+        gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    }
+)";
+
+const char *fragmentShaderSource = R"(
+    #version 330 core
+    out vec4 FragColor;
+    void main()
+    {
+        FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    }
+)";
+
+Application::Application()
+    : gameRunning(true), frameCount(0), timeDifference(0), frameAverage(0),
+      cameraPos(0.0f, 0.0f, 3.0f), cameraFront(0.0f, 0.0f, -1.0f), cameraUp(0.0f, 1.0f, 0.0f),
+      yaw(-90.0f), pitch(0.0f), debugMode(true), window(nullptr), glContext(nullptr)
+{
+  std::cout << "Application Created\n";
 #ifdef _WIN32
   startTime = GetTickCount();
   endTime = GetTickCount();
-  setRefreshRate();
 #else
   startTime = linux_tick();
   endTime = linux_tick();
 #endif
-  timeDifference = 0;
-  frameAverage = 0;
 }
 
-Application::~Application() { std::cout << "-----Application Destroyed\n"; }
+Application::~Application()
+{
+  std::cout << "Application Destroyed\n";
+  clean();
+}
 
-bool Application::init() {
-  try {
-    if (SDL_Init(SDL_INIT_EVERYTHING) == 0) {
-      std::cout << "-----SDL Init Done" << std::endl;
-      window = SDL_CreateWindow(
-          windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-          SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-
-      if (!window) {
-        throw "Window creation failed!";
-      }
-
-      std::cout << "-----Window Created" << std::endl;
-
-      renderer =
-          SDL_CreateRenderer(window, -1,
-                             SDL_RENDERER_PRESENTVSYNC |
-                                 SDL_RENDERER_ACCELERATED); // Create renderer
-      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0); // Set clear color to white
-
-      if (!renderer) {
-        throw "Renderer creation failed.";
-      }
-
-      std::cout << "-----Renderer Created" << std::endl;
-
-      std::cout << "-----Start ImGUI\n";
-      IMGUI_CHECKVERSION();
-      ImGui::CreateContext();
-      io = ImGui::GetIO();
-      io.ConfigFlags |=
-          ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-      io.ConfigFlags |=
-          ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
-      ImGui::StyleColorsDark();
-      // Setup Platform/Renderer backends
-      ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
-      ImGui_ImplSDLRenderer2_Init(renderer);
-      std::cout << "-----ImGUI Created" << std::endl;
-      // Loading texture memory
-      SDL_Texture *temp_tex = NULL;
-
-      gameRunning = true;
-    } else {
-      gameRunning = false;
+bool Application::init()
+{
+  try
+  {
+    std::cout << "Initializing SDL..." << std::endl;
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    {
+      throw std::runtime_error("SDL initialization failed: " + std::string(SDL_GetError()));
     }
 
+    std::cout << "Setting GL attributes..." << std::endl;
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    std::cout << "Creating window..." << std::endl;
+    window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                              SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    if (!window)
+    {
+      throw std::runtime_error("Window creation failed: " + std::string(SDL_GetError()));
+    }
+
+    std::cout << "Creating GL context..." << std::endl;
+    glContext = SDL_GL_CreateContext(window);
+    if (!glContext)
+    {
+      throw std::runtime_error("OpenGL context creation failed: " + std::string(SDL_GetError()));
+    }
+
+    std::cout << "Initializing GLEW..." << std::endl;
+    glewExperimental = GL_TRUE;
+    GLenum glewError = glewInit();
+    if (glewError != GLEW_OK)
+    {
+      throw std::runtime_error("GLEW initialization failed: " + std::string((char *)glewGetErrorString(glewError)));
+    }
+
+    std::cout << "Creating shaders..." << std::endl;
+    GLuint vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSource);
+    GLuint fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+
+    std::cout << "Creating shader program..." << std::endl;
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    GLint success;
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+      GLchar infoLog[512];
+      glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+      throw std::runtime_error("Shader program linking failed: " + std::string(infoLog));
+    }
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    std::cout << "Setting up vertex data..." << std::endl;
+    float vertices[] = {
+        -0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+        0.5f, 0.5f, -0.5f,
+        -0.5f, 0.5f, -0.5f,
+        -0.5f, -0.5f, 0.5f,
+        0.5f, -0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        -0.5f, 0.5f, 0.5f};
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    std::cout << "Setting up ImGui..." << std::endl;
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    ImGui::StyleColorsDark();
+    ImGui_ImplSDL2_InitForOpenGL(window, glContext);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    std::cout << "Initialization complete." << std::endl;
+    gameRunning = true;
     return true;
-  } catch (const char *error) {
-    std::cout << error << std::endl;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "Error in Application::init(): " << e.what() << std::endl;
+    gameRunning = false;
     return false;
   }
 }
 
-void Application::setRefreshRate() {
-  DEVMODE dm;
-  dm.dmSize = sizeof(dm);
-  EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &dm);
-  this->fps = dm.dmDisplayFrequency;
-  std::cout << "Refresh Rate: " << this->fps << std::endl;
-}
-
-void Application::handleEvents() {
-  SDL_Event event;
-  SDL_PollEvent(&event);
-  ImGui_ImplSDL2_ProcessEvent(&event);
-  switch (event.type) {
-  case SDL_MOUSEMOTION:
-    SDL_GetMouseState(&xMouse, &yMouse);
-    break;
-  case SDL_MOUSEBUTTONDOWN:
-    mouseDown = true;
-    break;
-  case SDL_MOUSEBUTTONUP:
-    mouseDown = false;
-    break;
-  case SDL_QUIT:
-    gameRunning = false;
-    break;
-  case SDL_KEYDOWN:
-    switch (event.key.keysym.sym) {}
-    break;
-  case SDL_KEYUP:
-    switch (event.key.keysym.sym) {
-    case SDLK_w: {
-      break;
-    }
-    case SDLK_a: {
-      break;
-    }
-    case SDLK_s: {
-      break;
-    }
-    case SDLK_d: {
-      break;
-    }
-    // Debug Mode Toggle
-    case SDLK_BACKQUOTE: {
-      debugMode = (debugMode) ? false : true;
-      std::cout << "Debug Mode: " << debugMode << std::endl;
-      break;
-    }
-    case SDLK_KP_0: {
-      break;
-    }
-    case SDLK_KP_1: {
-      break;
-    }
-    case SDLK_KP_2: {
-    }
-    }
-    break;
-  default:
-    break;
-  }
-}
-
-void Application::update() // Update Logic
+void Application::render()
 {
-  // Logic --> Physics --> Render
-}
+  try
+  {
+    std::cout << "Starting render..." << std::endl;
 
-void Application::render() {
-  SDL_SetRenderDrawColor(
-      renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255),
-      (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
-  if (debugMode) {
-    // Start the Dear ImGui frame
-    ImGui_ImplSDLRenderer2_NewFrame();
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    std::cout << "Using shader program..." << std::endl;
+    glUseProgram(shaderProgram);
+
+    std::cout << "Creating matrices..." << std::endl;
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+
+    std::cout << "Getting uniform locations..." << std::endl;
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+
+    if (modelLoc == -1 || viewLoc == -1 || projLoc == -1)
+    {
+      throw std::runtime_error("Failed to get uniform locations");
+    }
+
+    std::cout << "Setting uniform values..." << std::endl;
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    std::cout << "Binding VAO and drawing..." << std::endl;
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+    glDrawArrays(GL_LINE_LOOP, 4, 4);
+    for (int i = 0; i < 4; ++i)
+    {
+      glDrawArrays(GL_LINES, i, 2);
+      glDrawArrays(GL_LINES, i + 4, 2);
+    }
+
+    std::cout << "Starting ImGui rendering..." << std::endl;
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-    // Frame actions
-    static float f = 0.0f;
-    static int counter = 0;
-    ImGui::Text("Hello, world %d", 123);
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 
-    // Rendering Frame
+    ImGui::Begin("Debug");
+    ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);
+    ImGui::Text("Yaw: %.2f, Pitch: %.2f", yaw, pitch);
+    ImGui::End();
+
     ImGui::Render();
-    SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x,
-                       io.DisplayFramebufferScale.y);
-    SDL_RenderClear(renderer);
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
-    SDL_RenderPresent(renderer);
-  } else {
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    std::cout << "Swapping window..." << std::endl;
+    SDL_GL_SwapWindow(window);
+
+    std::cout << "Render complete." << std::endl;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "Error in Application::render(): " << e.what() << std::endl;
+    gameRunning = false;
   }
 }
 
-void Application::clean() {
-  SDL_DestroyWindow(window); // destroy the window
-  SDL_Quit();                // quit and delete all SDL
+void Application::handleEvents()
+{
+  SDL_Event event;
+  while (SDL_PollEvent(&event))
+  {
+    ImGui_ImplSDL2_ProcessEvent(&event);
+    if (event.type == SDL_QUIT)
+    {
+      gameRunning = false;
+    }
+  }
+}
+
+void Application::update()
+{
+  // Update game logic here
+}
+
+void Application::clean()
+{
+  if (ImGui::GetCurrentContext())
+  {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+  }
+
+  if (VAO)
+  {
+    glDeleteVertexArrays(1, &VAO);
+  }
+  if (VBO)
+  {
+    glDeleteBuffers(1, &VBO);
+  }
+  if (shaderProgram)
+  {
+    glDeleteProgram(shaderProgram);
+  }
+
+  if (glContext)
+  {
+    SDL_GL_DeleteContext(glContext);
+  }
+  if (window)
+  {
+    SDL_DestroyWindow(window);
+  }
+  SDL_Quit();
+}
+
+GLuint Application::createShader(GLenum type, const char *source)
+{
+  GLuint shader = glCreateShader(type);
+  glShaderSource(shader, 1, &source, NULL);
+  glCompileShader(shader);
+
+  GLint success;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (!success)
+  {
+    GLchar infoLog[512];
+    glGetShaderInfoLog(shader, 512, NULL, infoLog);
+    std::string shaderType = (type == GL_VERTEX_SHADER) ? "vertex" : "fragment";
+    throw std::runtime_error(shaderType + " shader compilation failed: " + std::string(infoLog));
+  }
+
+  return shader;
 }
