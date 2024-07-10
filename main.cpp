@@ -33,7 +33,7 @@ int main(int argc, char *args[])
     app->update();
     app->render();
     // Cap FPS and Wait timer
-    framerate_cap(starting_tick, 60);
+    framerate_cap(starting_tick, 120);
 
     Uint64 end_timer = SDL_GetPerformanceCounter(); // End FPS clock after delay
     // Calculate and print framerate

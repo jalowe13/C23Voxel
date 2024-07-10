@@ -42,7 +42,8 @@ const char *fragmentShaderSource = R"(
 Application::Application()
     : gameRunning(true), frameCount(0), timeDifference(0), frameAverage(0),
       cameraPos(0.0f, 0.0f, 3.0f), cameraFront(0.0f, 0.0f, -1.0f), cameraUp(0.0f, 1.0f, 0.0f),
-      yaw(-90.0f), pitch(0.0f), debugMode(true), window(nullptr), glContext(nullptr)
+      yaw(-90.0f), pitch(0.0f), debugMode(true), window(nullptr), glContext(nullptr), lastX(SCREEN_WIDTH / 2.0f), lastY(SCREEN_HEIGHT / 2.0f),
+      mouseSensitivity(0.1f), firstMouse(true)
 {
   std::cout << "Application Created\n";
 #ifdef _WIN32
@@ -74,6 +75,8 @@ bool Application::init()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_CaptureMouse(SDL_TRUE);
 
     std::cout << "Creating window..." << std::endl;
     window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -232,6 +235,43 @@ void Application::render()
   }
 }
 
+// Mouse handling
+// SDL_Event event is passed in from handleEvents
+void Application::handleMouse(SDL_Event event)
+{
+  if (firstMouse)
+  {
+    lastX = event.motion.x;
+    lastY = event.motion.y;
+    firstMouse = false;
+  }
+  float xoffset = event.motion.x - lastX;
+  float yoffset = lastY - event.motion.y;
+  lastX = event.motion.x;
+  lastY = event.motion.y;
+
+  xoffset *= mouseSensitivity;
+  yoffset *= mouseSensitivity;
+
+  yaw += xoffset;
+  pitch += yoffset;
+
+  if (pitch > 89.0f)
+  {
+    pitch = 89.0f;
+  }
+  if (pitch < -89.0f)
+  {
+    pitch = -89.0f;
+  }
+
+  glm::vec3 front;
+  front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+  front.y = sin(glm::radians(pitch));
+  front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+  cameraFront = glm::normalize(front);
+}
+
 void Application::handleEvents()
 {
   SDL_Event event;
@@ -241,6 +281,35 @@ void Application::handleEvents()
     if (event.type == SDL_QUIT)
     {
       gameRunning = false;
+    }
+    else if (event.type == SDL_MOUSEMOTION)
+    {
+      handleMouse(event);
+    }
+    else if (event.type == SDL_KEYDOWN)
+    {
+      float cameraSpeed = 0.05f; // Adjust this value to change movement speed
+      switch (event.key.keysym.sym)
+      {
+      case SDLK_w:
+        cameraPos += cameraSpeed * cameraFront;
+        break;
+      case SDLK_s:
+        cameraPos -= cameraSpeed * cameraFront;
+        break;
+      case SDLK_a:
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        break;
+      case SDLK_d:
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        break;
+      case SDLK_SPACE:
+        cameraPos += cameraUp * cameraSpeed;
+        break;
+      case SDLK_LCTRL:
+        cameraPos -= cameraUp * cameraSpeed;
+        break;
+      }
     }
   }
 }

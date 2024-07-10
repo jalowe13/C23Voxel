@@ -67,7 +67,7 @@ endif
 
 # Clean all object files
 cleanall:
-	$(RM) *.o
+	$(RM) $(filter-out imgui.o imgui_widgets.o imgui_tables.o imgui_impl_sdlrenderer2.o imgui_impl_sdl2.o imgui_draw.o imgui_demo.o, $(wildcard *.o))
 
 # Clean specific object file, used more if a header file is edited and not detected as a change
 clean:

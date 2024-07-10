@@ -55,6 +55,7 @@ public:
   ~Application();
 
   bool init();
+  void handleMouse(SDL_Event event);
   void handleEvents();
   void update();
   void render();
@@ -80,6 +81,10 @@ private:
   vec3 cameraUp;
   float yaw;
   float pitch;
+  // Mouse input for camera rotation
+  float lastX, lastY;
+  float mouseSensitivity;
+  bool firstMouse;
 
   // Game state
   bool gameRunning;
