@@ -1,0 +1,33 @@
+
+//Initial Commit Project Ingnores
+.vscode
+.vs/
+Debug
+TheOneSDL.sln
+TheOneSDL/TheOneSDL.vcxproj
+TheOneSDL/TheOneSDL.vcxproj.filters
+TheOneSDL/TheOneSDL.vcxproj.user
+TheOneSDL/Dee Yan-Key - Bipolar.mp3
+TheOneSDL/bipolar.wav
+TheOneSDL/TheOneSDL.aps
+TheOneSDL/TheOneSDL.rc
+TheOneSDL/TheOneSDL.pdb
+TheOneSDL/TheOneSDL.ilk
+TheOneSDL/TheOneSDL.exe
+TheOneSDL/.vscode/c_cpp_properties.json
+TheOneSDL/.vscode/settings.json
+TheOneSDL/.vscode/tasks.json
+TheOneSDL/.vscode/launch.json
+*.mp4
+*.o
+*.gch
+TheOneSDL/TheOne.exe
+TheOneSDL/TheOne
+TheOneSDL/build
+*.zip
+*.lnk
+*.zip
+*.exe
+imguiclone/imgui/
+/imgui
+*.ini
