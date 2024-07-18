@@ -32,13 +32,15 @@ ifeq ($(OS),Windows_NT)
     RM = del /Q
 	ECHO_MESSAGE = "MinGW"
 	CXXFLAGS = -std=c++11 -I$(MSYS2_ROOT)/$(MSYS2_TARGET_TRIPLET)/include  -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-	LDFLAGS := -L$(MSYS2_ROOT)/$(MSYS2_TARGET_TRIPLET)/lib 
+	LDFLAGS := -L$(MSYS2_ROOT)/$(MSYS2_TARGET_TRIPLET)/lib
 	CXXFLAGS = -std=c++11 -I$(MSYS2_ROOT)/$(MSYS2_TARGET_TRIPLET)/include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(MSYS2_ROOT)/$(MSYS2_TARGET_TRIPLET)/include/GL
 	LIB_LIST = -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lSDL2_image -ljsoncpp -static-libgcc -static-libstdc++ -lgdi32 -lopengl32 -lglew32 -limm32
 else
     RM = rm -f
-	LDFLAGS= -Lusr/include
-	LIB_LIST = -lSDL2main -lSDL2 -lSDL2_ttf -lSDL2_image -ljsoncpp
+    ECHO_MESSAGE = "Unix"
+    CXXFLAGS = -std=c++11 -I/usr/include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+    LDFLAGS = -L/usr/lib
+    LIB_LIST = -lSDL2main -lSDL2 -lSDL2_ttf -lSDL2_image -ljsoncpp -lGL -lGLEW
 endif
 
 %.o:%.cpp
@@ -50,13 +52,22 @@ endif
 %.o:$(IMGUI_DIR)/backends/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+ifeq ($(OS),Windows_NT)
 $(RES): $(RC)
-	windres -O coff -i $(RC) -o $(RES)
+		windres -O coff -i $(RC) -o $(RES)
+RESOBJ = $(RES)
+else
+$(RES):
+		@echo "Resource compilation skipped on Unix"
+RESOBJ =
+endif
 
 all: $(EXE)
-	@echo Build complete for $(ECHO_MESSAGE)
-$(EXE): $(OBJS) $(RES)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIB_LIST)
+		@echo Build complete for $(ECHO_MESSAGE)
+
+$(EXE): $(OBJS) $(RESOBJ)
+		$(CXX) -o $@ $^ $(CXXFLAGS) $(LIB_LIST)
+
 
 # Swap between Windows and Unix installs
 ifeq ($(OS),Windows_NT)

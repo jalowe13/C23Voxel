@@ -18,6 +18,7 @@ uint32_t linux_tick()
 }
 #endif
 
+// Model, View, and Projection Transformations to the input vertex position
 const char *vertexShaderSource = R"(
     #version 330 core
     layout (location = 0) in vec3 aPos;
@@ -29,7 +30,7 @@ const char *vertexShaderSource = R"(
         gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
     }
 )";
-
+// Vertex color is red
 const char *fragmentShaderSource = R"(
     #version 330 core
     out vec4 FragColor;
@@ -39,6 +40,14 @@ const char *fragmentShaderSource = R"(
     }
 )";
 
+// Initial params for the OpenGL camera system
+// Camera position, front, and up vectors
+// Yaw and pitch angles
+// Mouse sensitivity
+// First mouse flag
+// Last mouse position
+// Debug mode flag
+// Application constructor
 Application::Application()
     : gameRunning(true), frameCount(0), timeDifference(0), frameAverage(0),
       cameraPos(0.0f, 0.0f, 3.0f), cameraFront(0.0f, 0.0f, -1.0f), cameraUp(0.0f, 1.0f, 0.0f),
@@ -55,6 +64,7 @@ Application::Application()
 #endif
 }
 
+//Application Destructor
 Application::~Application()
 {
   std::cout << "Application Destroyed\n";
@@ -93,6 +103,7 @@ bool Application::init()
       throw std::runtime_error("OpenGL context creation failed: " + std::string(SDL_GetError()));
     }
 
+    // GLEW for pointers to open GL extensions
     std::cout << "Initializing GLEW..." << std::endl;
     glewExperimental = GL_TRUE;
     GLenum glewError = glewInit();
@@ -101,10 +112,23 @@ bool Application::init()
       throw std::runtime_error("GLEW initialization failed: " + std::string((char *)glewGetErrorString(glewError)));
     }
 
+    // Creating shaders
+    // Vertex and fragment shaders
+    // Vertex shaders are used to transform the input vertex position to the output position
+    // Fragment shaders are used to determine the final color of a pixel
+    // Shader program is used to link the shaders together
+    // Vertex - Process individual vertices of 3D Geometry
+    // Fragment - Process the rasterized fragments of 3D Geometry or pixels
+    // Vertex shader input - position, normal texture cords
+    // Fragment shader input - interpolated values from vertex shader and fixed function stages
     std::cout << "Creating shaders..." << std::endl;
     GLuint vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSource);
     GLuint fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
+    // Shader program
+    // Linking the shaders together
+    // Process vertex data and determine pixel colors from the fragment shader
+    // Determines how the 3D geometry is rendered
     std::cout << "Creating shader program..." << std::endl;
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
@@ -120,33 +144,69 @@ bool Application::init()
       throw std::runtime_error("Shader program linking failed: " + std::string(infoLog));
     }
 
+    // Marked for deletion when the vertex and fragments are no longer needed
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
     std::cout << "Setting up vertex data..." << std::endl;
+    // Vertex data for a cube
     float vertices[] = {
-        -0.5f, -0.5f, -0.5f,
-        0.5f, -0.5f, -0.5f,
-        0.5f, 0.5f, -0.5f,
-        -0.5f, 0.5f, -0.5f,
-        -0.5f, -0.5f, 0.5f,
-        0.5f, -0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f};
+        -0.5f, -0.5f, -0.5f, // Each vertex (corner) of the cube fbl
+        0.5f, -0.5f, -0.5f, // fbr
+        0.5f, 0.5f, -0.5f, // ftr
+        -0.5f, 0.5f, -0.5f, // ftl
+        -0.5f, -0.5f, 0.5f, // bbl
+        0.5f, -0.5f, 0.5f,  // bbr
+        0.5f, 0.5f, 0.5f,  // btr
+        -0.5f, 0.5f, 0.5f}; // btl
 
+    // Define the edges with indicies
+    unsigned int indices[] = {
+        0, 1,  1, 2,  2, 3,  3, 0,  // front face
+        4, 5,  5, 6,  6, 7,  7, 4,  // back face
+        0, 4,  1, 5,  2, 6,  3, 7   // connecting edges
+    };
+
+    // Generates a VAO and a VBO
+    // VAO - Vertex Array Object - Stores vertex attribute configurations
+    // VBO - Vertex Buffer Object - Stores vertex data
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
+    // Binds the currently used VAO config
     glBindVertexArray(VAO);
-
+    // Binds the currently used VBO config
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // Copies the vertex data into the VBO
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
+    // Create and bind the EBO
+    // EBO - Element Buffer Object - Stores the indices of the vertices
+    // Used to reduce the number of vertices that need to be stored
+    // Indices are used to reference the vertices
+    // Indices are used to define the order of the vertices
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+
+    // Configures the vertex attribute pointers
+    // Position attribute
+    // 0 - Index of the vertex attribute
+    // 3 - Number of components per vertex attribute
+    // GL_FLOAT - Type of the data
+    // GL_FALSE - Whether the data should be normalized
+    // 3 * sizeof(float) - Stride between consecutive vertex attributes
+    // (void *)0 - Offset of the first component of the first vertex attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
+    // Unbinds the VBO and VAO with no vertex data or config
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // Unbind EBO with no vertex data
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     std::cout << "Setting up ImGui..." << std::endl;
     IMGUI_CHECKVERSION();
@@ -202,14 +262,7 @@ void Application::render()
 
     std::cout << "Binding VAO and drawing..." << std::endl;
     glBindVertexArray(VAO);
-    glDrawArrays(GL_LINE_LOOP, 0, 4);
-    glDrawArrays(GL_LINE_LOOP, 4, 4);
-    for (int i = 0; i < 4; ++i)
-    {
-      glDrawArrays(GL_LINES, i, 2);
-      glDrawArrays(GL_LINES, i + 4, 2);
-    }
-
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
     std::cout << "Starting ImGui rendering..." << std::endl;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
