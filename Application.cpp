@@ -5,6 +5,7 @@
 #include "imgui_impl_opengl3.h"
 #include <iostream>
 #include <stdexcept>
+#include <random>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,25 +19,38 @@ uint32_t linux_tick()
 }
 #endif
 
+// Randon Distribution
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<> dis(0.2, 0.8);
+
 // Model, View, and Projection Transformations to the input vertex position
 const char *vertexShaderSource = R"(
     #version 330 core
     layout (location = 0) in vec3 aPos;
+
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
+    uniform vec3 cubeColor;
+
+    out vec3 fragColor;
+
     void main()
     {
-        gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+        gl_Position = projection * view * model * vec4(aPos, 1.0);
+        fragColor = cubeColor;
     }
 )";
 // Vertex color is red
 const char *fragmentShaderSource = R"(
     #version 330 core
+    in vec3 fragColor;
     out vec4 FragColor;
+
     void main()
     {
-        FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        FragColor = vec4(fragColor, 1.0);
     }
 )";
 
@@ -159,10 +173,12 @@ bool Application::init()
     ImGui_ImplOpenGL3_Init("#version 330");
 
     //std::cout << "Render complete." << std::endl;
-    cubes.reserve(2); // Reserve 2 cubes
-    cubes.emplace_back(Cube(1, glm::vec3(-1.0f, 0.0f, -3.0f)));
-    cubes.emplace_back(Cube(2, glm::vec3(1.0f, 0.0f, -3.0f)));
-    cubes.emplace_back(Cube(3, glm::vec3(3.0f, 0.0f, -3.0f)));
+    //cubes.reserve(2); // Reserve 2 cubes
+
+    cubes.emplace_back(Cube(1, glm::vec3(-1.0f, 0.0f, -3.0f), glm::vec3(0.0f), glm::vec3(1.0f),gen,dis));
+    cubes.emplace_back(Cube(2, glm::vec3(1.0f, 0.0f, -3.0f), glm::vec3(0.0f), glm::vec3(1.0f),gen,dis));
+    cubes.emplace_back(Cube(3, glm::vec3(1.0f, 1.0f, -3.0f), glm::vec3(0.0f), glm::vec3(0.1f, 0.1f, 0.1f),gen,dis));
+
 
     //std::cout << "Initialization complete." << std::endl;
     gameRunning = true;
@@ -209,6 +225,14 @@ void Application::render()
     // Draw cubes here
     for (auto &cube : cubes) {
         glm::mat4 model = cube.getModelMatrix();
+        glm::vec3 color = cube.getColor();
+        // Set the color uniform
+        GLint colorLoc = glGetUniformLocation(shaderProgram, "cubeColor");
+        if (colorLoc != -1) {
+            glUniform3fv(colorLoc, 1, glm::value_ptr(color));
+        } else {
+            std::cerr << "Warning: cubeColor uniform not found in shader program" << std::endl;
+        }
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         cube.draw();
     }
@@ -264,10 +288,12 @@ void Application::handleMouse(SDL_Event event)
   {
     pitch = 89.0f;
   }
-  if (pitch < -89.0f)
+  if (pitch < 0.0f)
   {
-    pitch = -89.0f;
+    pitch = 0.0f;
   }
+
+
 
   glm::vec3 front;
   front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
@@ -292,7 +318,7 @@ void Application::handleEvents()
     }
     else if (event.type == SDL_KEYDOWN)
     {
-      float cameraSpeed = 0.05f; // Adjust this value to change movement speed
+      float cameraSpeed = 0.1f; // Adjust this value to change movement speed
       switch (event.key.keysym.sym)
       {
       case SDLK_w:

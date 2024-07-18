@@ -1,9 +1,15 @@
 #include "Cube.h"
 #include <iostream>
 
-Cube::Cube(unsigned int id, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale)
-    : id(id), position(position), rotation(rotation), scale(scale), VAO(0), VBO(0), EBO(0) {
-    std::cout << "Cube " << id << " constructed at " << this << std::endl;
+Cube::Cube(unsigned int id, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale,
+    std::mt19937& gen, std::uniform_real_distribution<>& dis)
+    : id(id), position(position), rotation(rotation), scale(scale),
+    VAO(0), VBO(0), EBO(0) {
+    // Generate a random color
+    color = glm::vec3(dis(gen), dis(gen), dis(gen));
+
+    std::cout << "Cube " << id << " constructed at " << this
+        << " with color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
     this->setupMesh();
 }
 
@@ -76,12 +82,16 @@ Cube::Cube(Cube&& other) noexcept
       position(std::move(other.position)),
       rotation(std::move(other.rotation)),
       scale(std::move(other.scale)),
+      color(std::move(other.color)),  // Add this line
       VAO(other.VAO),
       VBO(other.VBO),
       EBO(other.EBO) {
     other.VAO = other.VBO = other.EBO = 0;
-    std::cout << "Cube " << id << " move constructed at " << this << " with VAO: " << VAO << std::endl;
+    std::cout << "Cube " << id << " move constructed at " << this
+              << " with VAO: " << VAO
+              << " and color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
 }
+
 
 void Cube::draw() {
     glBindVertexArray(VAO);
