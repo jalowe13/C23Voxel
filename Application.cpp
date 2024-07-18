@@ -150,28 +150,39 @@ bool Application::init()
 
     std::cout << "Setting up vertex data..." << std::endl;
     // Vertex data for a cube
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f, // Each vertex (corner) of the cube fbl
-        0.5f, -0.5f, -0.5f, // fbr
-        0.5f, 0.5f, -0.5f, // ftr
-        -0.5f, 0.5f, -0.5f, // ftl
-        -0.5f, -0.5f, 0.5f, // bbl
-        0.5f, -0.5f, 0.5f,  // bbr
-        0.5f, 0.5f, 0.5f,  // btr
-        -0.5f, 0.5f, 0.5f}; // btl
+    struct Vertex
+    {
+      glm::vec3 position_cords;
+      glm::vec2 texture_cords;
+    };
+    Vertex vertices[] = {
+        {{-0.5f, -0.5f, -0.5f},{0.0f,0.0f}}, // Each vertex (corner) of the cube fbl
+        {{0.5f, -0.5f, -0.5f},{1.0f,0.0f}}, // fbr
+        {{0.5f, 0.5f, -0.5f},{1.0f,1.0f}}, // ftr
+        {{-0.5f, 0.5f, -0.5f},{0.0f,1.0f}}, // ftl
+        {{-0.5f, -0.5f, 0.5f},{0.0f,0.0f}}, // bbl
+        {{0.5f, -0.5f, 0.5f},{1.0f,0.0f}},  // bbr
+        {{0.5f, 0.5f, 0.5f},{1.0f,1.0f}},  // btr
+        {{-0.5f, 0.5f, 0.5f},{0.0f,1.0f}}
+    }; // btl
 
     // Define the edges with indicies
     unsigned int indices[] = {
-        0, 1,  1, 2,  2, 3,  3, 0,  // front face
-        4, 5,  5, 6,  6, 7,  7, 4,  // back face
-        0, 4,  1, 5,  2, 6,  3, 7   // connecting edges
+        0, 1, 2,  2, 3, 0,  // Front face
+        4, 5, 6,  6, 7, 4,  // Back face
+        0, 4, 7,  7, 3, 0,  // Left face
+        1, 5, 6,  6, 2, 1,  // Right face
+        3, 2, 6,  6, 7, 3,  // Top face
+        0, 1, 5,  5, 4, 0   // Bottom face
     };
+
 
     // Generates a VAO and a VBO
     // VAO - Vertex Array Object - Stores vertex attribute configurations
     // VBO - Vertex Buffer Object - Stores vertex data
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
 
     // Binds the currently used VAO config
     glBindVertexArray(VAO);
@@ -185,8 +196,6 @@ bool Application::init()
     // Used to reduce the number of vertices that need to be stored
     // Indices are used to reference the vertices
     // Indices are used to define the order of the vertices
-    unsigned int EBO;
-    glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 
@@ -198,8 +207,14 @@ bool Application::init()
     // GL_FALSE - Whether the data should be normalized
     // 3 * sizeof(float) - Stride between consecutive vertex attributes
     // (void *)0 - Offset of the first component of the first vertex attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void *)offsetof(Vertex, position_cords)); // Check position var
     glEnableVertexAttribArray(0);
+
+    // Texture coreds
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        (void *)offsetof(Vertex, texture_cords)); // Check color var
+    glEnableVertexAttribArray(1);
 
     // Unbinds the VBO and VAO with no vertex data or config
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -262,7 +277,7 @@ void Application::render()
 
     std::cout << "Binding VAO and drawing..." << std::endl;
     glBindVertexArray(VAO);
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     std::cout << "Starting ImGui rendering..." << std::endl;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();

@@ -73,7 +73,7 @@ private:
 
   // OpenGL related
   GLuint shaderProgram;
-  GLuint VAO, VBO;
+  GLuint VAO, VBO, EBO;
 
   // Camera
   vec3 cameraPos;
