@@ -29,6 +29,9 @@
 
 #include <GL/glew.h>
 
+// Cube
+#include "Cube.h"
+
 using namespace glm;
 
 // PreProcessor Declarations
@@ -96,6 +99,9 @@ private:
   int endTime;
   int timeDifference;
   float frameAverage;
+
+  // Cubes
+  std::vector<Cube> cubes;
 
   // Helper function for shader creation
   GLuint createShader(GLenum type, const char *source);

@@ -54,7 +54,7 @@ Application::Application()
       yaw(-90.0f), pitch(0.0f), debugMode(true), window(nullptr), glContext(nullptr), lastX(SCREEN_WIDTH / 2.0f), lastY(SCREEN_HEIGHT / 2.0f),
       mouseSensitivity(0.1f), firstMouse(true)
 {
-  std::cout << "Application Created\n";
+  //std::cout << "Application Created\n";
 #ifdef _WIN32
   startTime = GetTickCount();
   endTime = GetTickCount();
@@ -67,7 +67,7 @@ Application::Application()
 //Application Destructor
 Application::~Application()
 {
-  std::cout << "Application Destroyed\n";
+  //std::cout << "Application Destroyed\n";
   clean();
 }
 
@@ -75,20 +75,20 @@ bool Application::init()
 {
   try
   {
-    std::cout << "Initializing SDL..." << std::endl;
+    //std::cout << "Initializing SDL..." << std::endl;
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
     {
       throw std::runtime_error("SDL initialization failed: " + std::string(SDL_GetError()));
     }
 
-    std::cout << "Setting GL attributes..." << std::endl;
+    //std::cout << "Setting GL attributes..." << std::endl;
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_SetRelativeMouseMode(SDL_TRUE);
     SDL_CaptureMouse(SDL_TRUE);
 
-    std::cout << "Creating window..." << std::endl;
+    //std::cout << "Creating window..." << std::endl;
     window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                               SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (!window)
@@ -96,7 +96,7 @@ bool Application::init()
       throw std::runtime_error("Window creation failed: " + std::string(SDL_GetError()));
     }
 
-    std::cout << "Creating GL context..." << std::endl;
+    //std::cout << "Creating GL context..." << std::endl;
     glContext = SDL_GL_CreateContext(window);
     if (!glContext)
     {
@@ -104,7 +104,7 @@ bool Application::init()
     }
 
     // GLEW for pointers to open GL extensions
-    std::cout << "Initializing GLEW..." << std::endl;
+    //std::cout << "Initializing GLEW..." << std::endl;
     glewExperimental = GL_TRUE;
     GLenum glewError = glewInit();
     if (glewError != GLEW_OK)
@@ -121,7 +121,7 @@ bool Application::init()
     // Fragment - Process the rasterized fragments of 3D Geometry or pixels
     // Vertex shader input - position, normal texture cords
     // Fragment shader input - interpolated values from vertex shader and fixed function stages
-    std::cout << "Creating shaders..." << std::endl;
+    //std::cout << "Creating shaders..." << std::endl;
     GLuint vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSource);
     GLuint fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
@@ -129,7 +129,8 @@ bool Application::init()
     // Linking the shaders together
     // Process vertex data and determine pixel colors from the fragment shader
     // Determines how the 3D geometry is rendered
-    std::cout << "Creating shader program..." << std::endl;
+    //std::cout << "Creating shader program..." << std::endl;
+    glEnable(GL_DEPTH_TEST);
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
@@ -148,82 +149,8 @@ bool Application::init()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    std::cout << "Setting up vertex data..." << std::endl;
-    // Vertex data for a cube
-    struct Vertex
-    {
-      glm::vec3 position_cords;
-      glm::vec2 texture_cords;
-    };
-    Vertex vertices[] = {
-        {{-0.5f, -0.5f, -0.5f},{0.0f,0.0f}}, // Each vertex (corner) of the cube fbl
-        {{0.5f, -0.5f, -0.5f},{1.0f,0.0f}}, // fbr
-        {{0.5f, 0.5f, -0.5f},{1.0f,1.0f}}, // ftr
-        {{-0.5f, 0.5f, -0.5f},{0.0f,1.0f}}, // ftl
-        {{-0.5f, -0.5f, 0.5f},{0.0f,0.0f}}, // bbl
-        {{0.5f, -0.5f, 0.5f},{1.0f,0.0f}},  // bbr
-        {{0.5f, 0.5f, 0.5f},{1.0f,1.0f}},  // btr
-        {{-0.5f, 0.5f, 0.5f},{0.0f,1.0f}}
-    }; // btl
 
-    // Define the edges with indicies
-    unsigned int indices[] = {
-        0, 1, 2,  2, 3, 0,  // Front face
-        4, 5, 6,  6, 7, 4,  // Back face
-        0, 4, 7,  7, 3, 0,  // Left face
-        1, 5, 6,  6, 2, 1,  // Right face
-        3, 2, 6,  6, 7, 3,  // Top face
-        0, 1, 5,  5, 4, 0   // Bottom face
-    };
-
-
-    // Generates a VAO and a VBO
-    // VAO - Vertex Array Object - Stores vertex attribute configurations
-    // VBO - Vertex Buffer Object - Stores vertex data
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    // Binds the currently used VAO config
-    glBindVertexArray(VAO);
-    // Binds the currently used VBO config
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // Copies the vertex data into the VBO
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-
-    // Create and bind the EBO
-    // EBO - Element Buffer Object - Stores the indices of the vertices
-    // Used to reduce the number of vertices that need to be stored
-    // Indices are used to reference the vertices
-    // Indices are used to define the order of the vertices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
-
-    // Configures the vertex attribute pointers
-    // Position attribute
-    // 0 - Index of the vertex attribute
-    // 3 - Number of components per vertex attribute
-    // GL_FLOAT - Type of the data
-    // GL_FALSE - Whether the data should be normalized
-    // 3 * sizeof(float) - Stride between consecutive vertex attributes
-    // (void *)0 - Offset of the first component of the first vertex attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        (void *)offsetof(Vertex, position_cords)); // Check position var
-    glEnableVertexAttribArray(0);
-
-    // Texture coreds
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        (void *)offsetof(Vertex, texture_cords)); // Check color var
-    glEnableVertexAttribArray(1);
-
-    // Unbinds the VBO and VAO with no vertex data or config
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    // Unbind EBO with no vertex data
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    std::cout << "Setting up ImGui..." << std::endl;
+    //std::cout << "Setting up ImGui..." << std::endl;
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
@@ -231,7 +158,13 @@ bool Application::init()
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    std::cout << "Initialization complete." << std::endl;
+    //std::cout << "Render complete." << std::endl;
+    cubes.reserve(2); // Reserve 2 cubes
+    cubes.emplace_back(Cube(1, glm::vec3(-1.0f, 0.0f, -3.0f)));
+    cubes.emplace_back(Cube(2, glm::vec3(1.0f, 0.0f, -3.0f)));
+    cubes.emplace_back(Cube(3, glm::vec3(3.0f, 0.0f, -3.0f)));
+
+    //std::cout << "Initialization complete." << std::endl;
     gameRunning = true;
     return true;
   }
@@ -247,20 +180,19 @@ void Application::render()
 {
   try
   {
-    std::cout << "Starting render..." << std::endl;
+    //std::cout << "Starting render..." << std::endl;
 
+    //std::cout << "Render method started, number of cubes: " << cubes.size() << std::endl;
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    std::cout << "Using shader program..." << std::endl;
+    //std::cout << "Using shader program..." << std::endl;
     glUseProgram(shaderProgram);
 
-    std::cout << "Creating matrices..." << std::endl;
-    glm::mat4 model = glm::mat4(1.0f);
+    //std::cout << "Creating matrices..." << std::endl;
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
 
-    std::cout << "Getting uniform locations..." << std::endl;
+    //std::cout << "Getting uniform locations..." << std::endl;
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -270,15 +202,17 @@ void Application::render()
       throw std::runtime_error("Failed to get uniform locations");
     }
 
-    std::cout << "Setting uniform values..." << std::endl;
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    //std::cout << "Setting uniform values..." << std::endl;
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    std::cout << "Binding VAO and drawing..." << std::endl;
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    std::cout << "Starting ImGui rendering..." << std::endl;
+    // Draw cubes here
+    for (auto &cube : cubes) {
+        glm::mat4 model = cube.getModelMatrix();
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        cube.draw();
+    }
+    //std::cout << "Starting ImGui rendering..." << std::endl;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -291,11 +225,13 @@ void Application::render()
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    std::cout << "Swapping window..." << std::endl;
+    //std::cout << "Swapping window..." << std::endl;
     SDL_GL_SwapWindow(window);
 
-    std::cout << "Render complete." << std::endl;
+    //std::cout << "Render complete." << std::endl;
+
   }
+
   catch (const std::exception &e)
   {
     std::cerr << "Error in Application::render(): " << e.what() << std::endl;
