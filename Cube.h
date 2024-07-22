@@ -28,8 +28,7 @@ public:
         glm::vec3 position,
         glm::vec3 rotation,
         glm::vec3 scale,
-        std::mt19937& gen,
-        std::uniform_real_distribution<>& dis
+        glm::vec3 color
     );
 
 

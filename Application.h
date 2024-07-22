@@ -10,8 +10,8 @@
 #define STR(x) STR_HELPER(x)
 
 // Screen Definitions
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>

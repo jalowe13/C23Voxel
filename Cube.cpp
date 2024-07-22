@@ -2,11 +2,10 @@
 #include <iostream>
 
 Cube::Cube(unsigned int id, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale,
-    std::mt19937& gen, std::uniform_real_distribution<>& dis)
+    glm::vec3 color)
     : id(id), position(position), rotation(rotation), scale(scale),
-    VAO(0), VBO(0), EBO(0) {
+    VAO(0), VBO(0), EBO(0), color(color) {
     // Generate a random color
-    color = glm::vec3(dis(gen), dis(gen), dis(gen));
 
     std::cout << "Cube " << id << " constructed at " << this
         << " with color: " << color.r << ", " << color.g << ", " << color.b << std::endl;

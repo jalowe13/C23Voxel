@@ -174,10 +174,20 @@ bool Application::init()
 
     //std::cout << "Render complete." << std::endl;
     //cubes.reserve(2); // Reserve 2 cubes
-
-    cubes.emplace_back(Cube(1, glm::vec3(-1.0f, 0.0f, -3.0f), glm::vec3(0.0f), glm::vec3(1.0f),gen,dis));
-    cubes.emplace_back(Cube(2, glm::vec3(1.0f, 0.0f, -3.0f), glm::vec3(0.0f), glm::vec3(1.0f),gen,dis));
-    cubes.emplace_back(Cube(3, glm::vec3(1.0f, 1.0f, -3.0f), glm::vec3(0.0f), glm::vec3(0.1f, 0.1f, 0.1f),gen,dis));
+    int tog = -1;
+    float x = 0.001f;
+    int i = 0;
+    for (int x = 0; x < 16; x++){
+        for (int y = 0; y < 16; y++){
+            cubes.emplace_back( // Position, Rotation, Scale, Color
+                Cube(i,
+                    glm::vec3(x, -1.0f,-y),
+                    glm::vec3(0.0f),
+                    glm::vec3(1.0f),
+                    glm::vec3(0, dis(gen) ,0)));
+            i++;
+        }
+    }
 
 
     //std::cout << "Initialization complete." << std::endl;
@@ -288,9 +298,9 @@ void Application::handleMouse(SDL_Event event)
   {
     pitch = 89.0f;
   }
-  if (pitch < 0.0f)
+  if (pitch < -30.0f)
   {
-    pitch = 0.0f;
+    pitch = -30.0f;
   }
 
 
