@@ -2,7 +2,7 @@
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
 #include <glm/gtc/type_ptr.hpp>
-#include "imgui_impl_opengl3.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include <iostream>
 #include <stdexcept>
 #include <random>
@@ -84,7 +84,17 @@ Application::~Application()
   //std::cout << "Application Destroyed\n";
   clean();
 }
-
+double Application::easeInOutExpo(double x) {
+    if (x == 0.0) {
+        return 0.0;
+    } else if (x == 1.0) {
+        return 1.0;
+    } else if (x < 0.5) {
+        return std::pow(2, 20 * x - 10) / 2;
+    } else {
+        return (2 - std::pow(2, -20 * x + 10)) / 2;
+    }
+}
 bool Application::init()
 {
   try
@@ -174,17 +184,22 @@ bool Application::init()
 
     //std::cout << "Render complete." << std::endl;
     //cubes.reserve(2); // Reserve 2 cubes
-    int tog = -1;
-    float x = 0.001f;
     int i = 0;
-    for (int x = 0; x < 16; x++){
-        for (int y = 0; y < 16; y++){
-            cubes.emplace_back( // Position, Rotation, Scale, Color
+    for (int x = 0; x < 40; x++) {
+        for (int z = 0; z < 40; z++) {
+            // Scale y input to [0, 1] range
+            double normalizedY = z / 39.9;
+            // Apply easing function
+            double easedY = easeInOutExpo(normalizedY);
+            // Scale the eased value to a more noticeable height (e.g., 0 to 10)
+            double scaledY = easedY * 7;
+            std::cout << "!!! EASE " << scaledY << std::endl;
+            cubes.emplace_back(
                 Cube(i,
-                    glm::vec3(x, -1.0f,-y),
+                    glm::vec3(x, scaledY, -z),  // Use scaledY for height
                     glm::vec3(0.0f),
-                    glm::vec3(1.0f),
-                    glm::vec3(0, dis(gen) ,0)));
+                    glm::vec3(0.1f),
+                    glm::vec3(0, dis(gen), 0)));
             i++;
         }
     }
@@ -201,6 +216,7 @@ bool Application::init()
     return false;
   }
 }
+
 
 void Application::render()
 {

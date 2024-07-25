@@ -86,9 +86,9 @@ Cube::Cube(Cube&& other) noexcept
       VBO(other.VBO),
       EBO(other.EBO) {
     other.VAO = other.VBO = other.EBO = 0;
-    std::cout << "Cube " << id << " move constructed at " << this
-              << " with VAO: " << VAO
-              << " and color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
+    // std::cout << "Cube " << id << " move constructed at " << this
+    //           << " with VAO: " << VAO
+    //           << " and color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
 }
 
 

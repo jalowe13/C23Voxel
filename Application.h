@@ -19,15 +19,17 @@
 #include <iostream>
 #include <json/json.h>
 
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_opengl3.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <GL/glew.h>
+
+#include <cmath>
 
 // Cube
 #include "Cube.h"
@@ -99,6 +101,9 @@ private:
   int endTime;
   int timeDifference;
   float frameAverage;
+
+  // Math functions
+  double easeInOutExpo(double x);
 
   // Cubes
   std::vector<Cube> cubes;
