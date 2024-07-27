@@ -108,6 +108,12 @@ private:
   // Cubes
   std::vector<Cube> cubes;
 
+  // Terrain constants
+  const int terrain16ChunkX = 256;
+  const int terrain16ChunkZ = 256;
+  const int terrain5ChunkX = 80;
+  const int terrain5ChunkZ = 80;
+
   // Helper function for shader creation
   GLuint createShader(GLenum type, const char *source);
 };

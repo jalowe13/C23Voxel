@@ -184,21 +184,24 @@ bool Application::init()
 
     //std::cout << "Render complete." << std::endl;
     //cubes.reserve(2); // Reserve 2 cubes
+
+
     int i = 0;
-    for (int x = 0; x < 40; x++) {
-        for (int z = 0; z < 40; z++) {
+    for (int x = 0; x < terrain5ChunkX; x++) {
+        for (int z = 0; z < terrain5ChunkZ; z++) {
             // Scale y input to [0, 1] range
-            double normalizedY = z / 39.9;
+            double normalizedY = static_cast<double>(z)/ (terrain5ChunkZ - 1);
             // Apply easing function
             double easedY = easeInOutExpo(normalizedY);
             // Scale the eased value to a more noticeable height (e.g., 0 to 10)
-            double scaledY = easedY * 7;
+            double scaledY = easedY * 10.0;
             std::cout << "!!! EASE " << scaledY << std::endl;
+            int roundedY = static_cast<int>(std::round(scaledY));
             cubes.emplace_back(
                 Cube(i,
-                    glm::vec3(x, scaledY, -z),  // Use scaledY for height
+                    glm::vec3(x, roundedY, -z),  // Use scaledY for height
                     glm::vec3(0.0f),
-                    glm::vec3(0.1f),
+                    glm::vec3(1.0f),
                     glm::vec3(0, dis(gen), 0)));
             i++;
         }
@@ -373,6 +376,15 @@ void Application::handleEvents()
 void Application::update()
 {
   // Update game logic here
+  for (auto &cube : cubes)
+  {
+      // Random x position increment or decrement
+      //const float increment = rand() % 2 == 0 ? -0.1f : 0.1f;
+      //cube.incrementXPosition(increment);
+      //cube.incrementZPosition(increment);
+      //cube.incrementYRotation(increment);
+      //cube.incrementScale(increment);
+  }
 }
 
 void Application::clean()

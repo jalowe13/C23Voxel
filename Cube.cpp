@@ -7,13 +7,13 @@ Cube::Cube(unsigned int id, glm::vec3 position, glm::vec3 rotation, glm::vec3 sc
     VAO(0), VBO(0), EBO(0), color(color) {
     // Generate a random color
 
-    std::cout << "Cube " << id << " constructed at " << this
-        << " with color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
+    // std::cout << "Cube " << id << " constructed at " << this
+    //     << " with color: " << color.r << ", " << color.g << ", " << color.b << std::endl;
     this->setupMesh();
 }
 
 Cube::~Cube() {
-    std::cout << "Cube " << id << " destroyed at " << this << std::endl;
+    //std::cout << "Cube " << id << " destroyed at " << this << std::endl;
     if (VAO != 0) {
         glDeleteVertexArrays(1, &VAO);
     }

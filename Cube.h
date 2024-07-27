@@ -31,8 +31,11 @@ public:
         glm::vec3 color
     );
 
-
-
+    void incrementXPosition(float increment) { position.x += increment; }
+    void incrementYPosition(float increment) { position.y += increment; }
+    void incrementZPosition(float increment) { position.z += increment; }
+    void incrementScale(float increment) { scale += glm::vec3(increment); }
+    void incrementYRotation(float increment) { rotation.y += increment; }
     // Move constructor
     Cube(Cube&& other) noexcept;
 
